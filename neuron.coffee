@@ -1,21 +1,3 @@
-# class NeuralNet
-# 	constructor: (@name) ->
-# 		@numNeurons = 0
-# 		@allNeurons = []
-
-# 	addNeuron: (neuronName, neuronLevel) ->
-# 		newNeuron = new Neuron(neuronName, neuronLevel)
-# 		@numNeurons++
-# 		@allNeurons.push(newNeuron)
-# 		return newNeuron
-
-# 	recalculate: () ->
-# 		# recalculate all the neurons in the net
-
-# 	addLink: (sourceName, destinationName, activationThreshold = 1) ->
-# 		# stuff here
-
-
 class Neuron
 	@numNeurons =  0
 
@@ -65,13 +47,17 @@ class TicTacToeNN
 		@addTripleSet("Up Diagonal",   [6, 4, 2])
 		@addTripleSet("Down Diagonal", [0, 4, 8])
 
+		@addOutcomeNeurons
 
 
 	addNeuron: (name, level) ->
+		newN = new Neuron(name)
 		@neuralLevels[level].push(new Neuron(name))
+		return newN
 
 
 	addTripleSet: (name, ipts) ->
+		# Add a trio of neurons representing a winning combo
 		newPos  = @addNeuron(name + '+', 1)
 		newNeg  = @addNeuron(name + '-', 1)
 		newDraw = @addNeuron(name + '=', 2)
@@ -80,7 +66,39 @@ class TicTacToeNN
 			newNeg.addInput(@negBaseNeurons[i])
 		newDraw.addInput(newPos)
 		newDraw.addInput(newNeg)
+
+		@posWinNeurons.push(newPos)
+		@negWinNeurons.push(newNeg)
+		@drawNeurons.push(newDraw)
+		return true
+
+	addOutcomeNeurons: () ->
+		@posOutcome = addNeuron("Positive Outcome", 2)
+		@negOutcome = addNeuron("Negative Outcome", 2)
+
+		for posWin in @posWinNeurons
+			@posOutcome.addInput(posWin, 3)
+
+		for negWin in @negWinNeurons
+			@negOutcome.addInput(negWin, 3)
+
+		@drawOutcome = addNeuron("Draw Outcome", 3)
+		for d in @drawNeurons
+			@drawOutcome.addInput(d)
+		return true
+
+	recalculate: () ->
+		for l in @neuralLevels
+			for n in l
+				n.recalculate()
+		return true
+
+	changeBox: (boxIdx, newState) ->
+		@boxes[boxIdx] = newState
 		
+		@posBaseNeurons[boxIdx].externalInput = if (newState == 1) then 1 else 0
+		@negBaseNeurons[boxIdx].externalInput = if (newState ==-1) then 1 else 0
+		return true
 
 
 
@@ -88,11 +106,14 @@ class TicTacToeNN
 
 
 
-n1 = new Neuron(0, "first")
-n2 = new Neuron(1, "second")
-console.log(n1)
-console.log(Neuron)
-n1.externalInput = 1
-n2.addInput(n1, 1)
-console.log("n1", n1)
-console.log("n2", n2)
+
+
+
+# n1 = new Neuron(0, "first")
+# n2 = new Neuron(1, "second")
+# console.log(n1)
+# console.log(Neuron)
+# n1.externalInput = 1
+# n2.addInput(n1, 1)
+# console.log("n1", n1)
+# console.log("n2", n2)
