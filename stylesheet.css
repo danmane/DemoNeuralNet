@@ -39,12 +39,22 @@
 	margin-bottom: 1px;
 }
 
-.TrioBox {
-	position: absolute;
+.trioBox {
+	/*position: absolute;*/
 	float: left;
 	width: 95px;
 	height:95px;
 	background-color: black;
+}
+
+.trioTitle {
+	float: left;
+	width: 95px;
+	height: 20px;
+	font-size: small;
+	color: black;
+	background-color: grey;
+	margin-bottom: 1px;
 }
 
 .neuronBox {
@@ -60,7 +70,7 @@
 .smallNeuronBox {
 	float: left;
 	width: 29px;
-	height: 99px;
+	height: 70px;
 	margin-right: 1px;
 	background-color: grey;
 	color: grey;
@@ -76,3 +86,14 @@
 	height: 120px;
 	background-color: #808080;
 }
+
+.trioContainer {
+	position: absolute;
+	left: 350px;
+	top: 200px;
+	float: left;
+	width: 400px;
+	height: 200px;
+	background-color: #808080;
+}
+
