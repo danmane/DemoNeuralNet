@@ -10,13 +10,8 @@ class Neuron
 		@externalInput = 0 # for inputting to the system from non-neural sources
 
 	recalculate: () -> 
-		if (@name == '0+')
-			console.log('recalculating ', @name, @externalInput, this)
 		@energyLevel = @externalInput
-		if (@name == '0+')
-			console.log(@name, @externalInput, @energyLevel)
 		for [n, threshold] in @inputs
-			console.log(n, threshold)
 			@energyLevel++ if n.energyLevel >= threshold
 
 	addInput: (inputNeuron, threshold=1) ->
@@ -25,15 +20,15 @@ class Neuron
 
 class TicTacToeNN
 	constructor: () ->
-#		@NN = new NeuralNet("Tic Tac Toe Neural Net")
+		console.log("game made")
 		@boxes = (0 for x in [0..8])  # Each will take on a +1 0 or -1 state, initialize to 0
 		@neuralLevels = ([] for x in [0..4])
 		@tripleSets = []
 		# level 0: Input neurons connected to boxes
 		# level 1: trinary win neurons
-		# level 2: double draw neurons, redWins, blueWins
-		# level 3: draw Intermediary
-		# level 4: draw outcome
+		# level 2: double tie neurons, redWins, blueWins
+		# level 3: tie Intermediary
+		# level 4: tie outcome
 
 		@posBaseNeurons = (@addNeuron(i + '+', 0) for i in [0..8])
 		@negBaseNeurons = (@addNeuron(i + '-', 0) for i in [0..8])
@@ -41,7 +36,7 @@ class TicTacToeNN
 
 		@posWinNeurons = []
 		@negWinNeurons = []
-		@drawNeurons = []
+		@tieNeurons = []
 
 		@addTripleSet("Top Across", [0, 1, 2])
 		@addTripleSet("Mid Across", [3, 4, 5])
@@ -67,22 +62,22 @@ class TicTacToeNN
 		# Add a trio of neurons representing a winning combo
 		newPos  = @addNeuron(name + '+', 1)
 		newNeg  = @addNeuron(name + '-', 1)
-		newDraw = @addNeuron(name + '=', 2)
+		newtie = @addNeuron(name + '=', 2)
 		for i in ipts
 			newPos.addInput(@posBaseNeurons[i])
 			newNeg.addInput(@negBaseNeurons[i])
-		newDraw.addInput(newPos)
-		newDraw.addInput(newNeg)
+		newtie.addInput(newPos)
+		newtie.addInput(newNeg)
 
 		@posWinNeurons.push(newPos)
 		@negWinNeurons.push(newNeg)
-		@drawNeurons.push(newDraw)
-		@tripleSets.push([name, newPos, newNeg, newDraw])
+		@tieNeurons.push(newtie)
+		@tripleSets.push([name, newPos, newNeg, newtie])
 		return true
 
 	addOutcomeNeurons: () ->
-		@posOutcome = @addNeuron("Positive Outcome", 2)
-		@negOutcome = @addNeuron("Negative Outcome", 2)
+		@posOutcome = @addNeuron("Red Wins!", 2)
+		@negOutcome = @addNeuron("Blue Wins!", 2)
 
 		for posWin in @posWinNeurons
 			@posOutcome.addInput(posWin, 3)
@@ -90,39 +85,28 @@ class TicTacToeNN
 		for negWin in @negWinNeurons
 			@negOutcome.addInput(negWin, 3)
 
-		@drawIntermediary = @addNeuron("Draw Intermediary", 3)
-		for d in @drawNeurons
-			@drawIntermediary.addInput(d)
+		@tieIntermediary = @addNeuron("tie Intermediary", 3)
+		for d in @tieNeurons
+			@tieIntermediary.addInput(d)
 
-		@drawOutcome = @addNeuron("Draw Outcome", 4)
-		@drawOutcome.addInput(@drawIntermediary, 8)
+		@tieOutcome = @addNeuron("It's a tie!", 4)
+		@tieOutcome.addInput(@tieIntermediary, 8)
 
 		return true
 
 	recalculate: () ->
-		# console.log(@neuralLevels)
 		for l in @neuralLevels
-			# console.log(l)
 			for n in l
-				# console.log(n)
 				n.recalculate()
 		return true
 
 	changeBox: (boxIdx, newState) ->
-		console.log("Called change box: idx, state ", boxIdx, newState, @posBaseNeurons[boxIdx])
 		@boxes[boxIdx] = newState
 
 		@posBaseNeurons[boxIdx].externalInput = if (newState ==  1) then 1 else 0
 		@negBaseNeurons[boxIdx].externalInput = if (newState == -1) then 1 else 0
 
-
-		#console.log("After switch: ", @posBaseNeurons[boxIdx])
-
-
 		@recalculate()
-
-		#console.log("Neuron after recalculate: ", @posBaseNeurons[boxIdx])
-
 
 	toggleBox: (boxIdx) ->
 		currentState = @boxes[boxIdx]
@@ -131,65 +115,112 @@ class TicTacToeNN
 		newState
 
 
-# n = new Neuron("test")
-# n.recalculate()
-# console.log(n)
-# n.externalInput = 1
-# n.recalculate()
-# console.log(n)
+
+class TrioBox
+	constructor: (@game, @idx) ->
+		trio = @game.tripleSets[@idx]
+		@name = trio[0]
+		@posNeuron = trio[1]
+		@negNeuron = trio[2]
+		@tieNeuron = trio[3]
+
+		@TBox = document.createElement("div")
+		@TBox.id = @name + "TBox"
+		@TBox.className = "TrioBox"
+
+		posColors = ["#808080", "#AA5555", "D52B2B", "FF0000"]
+		negColors = ["#808080", "#55AA55", "2BD52B", "00FF00"]
+		tieColors = ["#808080", "purple"]
+		@posBox = new NeuronBox(@posNeuron, posColors, @me, "smallNeuronBox")
+		@posBox = new NeuronBox(@posNeuron, posColors, @me, "smallNeuronBox")
+		@posBox = new NeuronBox(@posNeuron, posColors, @me, "smallNeuronBox")
+
+
+		
+
+class OutcomeBox
+	constructor: (@game) ->
+		@me = document.createElement("div")
+		@me.id = "outcomeBox"
+		@me.className = "outcomeContainer"
+		document.body.appendChild(@me)
+		posColors = ["grey", "red"]
+		negColors = ["grey", "blue"]
+		tieColors = ["grey", "purple"]
+		@posBox = new NeuronBox(game.posOutcome, posColors, @me, "neuronBox")
+		@negBox = new NeuronBox(game.negOutcome, negColors, @me, "neuronBox")
+		@tieBox = new NeuronBox(game.tieOutcome, tieColors, @me, "neuronBox")
+
+	reload: () ->
+		@posBox.reload()
+		@negBox.reload()
+		@tieBox.reload()
+
+
+class NeuronBox
+	constructor: (@neuron, @colors, @container, className) ->
+		#console.log("made box @neuron.name")
+		@me = document.createElement("div")
+		@me.id = "neuronBox " + @neuron.name 
+		@me.className = className
+		@container.appendChild(@me)
+		@s = @me.style
+		text = document.createTextNode(@neuron.name)
+		#text.style.fontColor = "grey"
+		@me.appendChild(text)
+
+	reload: () ->
+		energyLevel = @neuron.energyLevel
+		@me.style.backgroundColor = @colors[energyLevel]
+
+class GameGrid
+	constructor: (@game, @nb) ->
+		@me = document.createElement("div");
+		@me.id = "grid"
+		@me.className = "gameGrid"
+		document.body.appendChild(@me)
+		boxes = []
+		for i in [0..8]
+			boxes.push( new Box(game, @, i) )
+
+	reload: () =>
+		console.log("reloading")
+		@nb.reload()
 
 class Box
-	constructor: (@game, grid, @idx) ->
-		console.log("constructing")
+	constructor: (@game, @grid, @idx) ->
+		#console.log("constructing", @game)
 		@elem = document.createElement("div")
 		@elem.id = "box" + idx
 		@elem.className = "box"
-		@elem.onclick = @toggle()
-		grid.appendChild(@)
+		@elem.onclick = @toggle #"toggleBox(" + @idx + ")"
+		@grid.me.appendChild(@elem)
 
-	toggle: () ->
+	toggle: () =>
+		#alert("click")
+		#console.log("game: ", @game, @idx)
 		ns = @game.toggleBox(@idx)
 		c = "grey" if ns is 0
 		c = "red"  if ns is 1
 		c = "blue" if ns is -1
 		@elem.style.backgroundColor = c
-
-
-
-
+		console.log("grid go reload", @grid)
+		@grid.reload()
 
 game = new TicTacToeNN()
 
-gameGrid = document.createElement("div");
-gameGrid.id = "grid"
-gameGrid.className = "gameGrid"
-document.body.appendChild(gameGrid)
-for i in [0..8]
-	b = new Box(game, gameGrid, i)
-	# console.log('making box')
-	# box = document.createElement("div");
-	# box.id = "box" + i
-	# box.className = "box"
-	# box.onclick = @toggle()
-	# gameGrid.appendChild(box)
+ob = new OutcomeBox(game)
+gg = new GameGrid(game, ob)
 
 
 
+# toggleBox = (i) ->
+# 	console.log("clicked")
+# 	s = game.toggleBox(i)
+# 	c = "grey" if ns is 0
+# 	c = "red" if ns is 1
+# 	c = "blue" if ns is -1
+# 	boxes[i].elem.style.backgroundColor = c
 
-#console.log(game.posOutcome.inputs)
-# console.log(game.neuralLevels[0])
-# console.log('==================')
-# console.log('==================')
-# console.log('==================')
-# console.log(game.posBaseNeurons)
-# console.log("Toggling box 0")
-# game.toggleBox(0)
-# #game.toggleBox(1)
-# #game.toggleBox(2)
-# console.log("Boxes: ", game.boxes)
-# console.log("Neuron 0: ", game.posBaseNeurons[0])
-# console.log("Calling recalculate on neuron 0:")
-# game.posBaseNeurons[0].recalculate()
 
-# console.log("Neuron 0: ", game.posBaseNeurons[0])
 
