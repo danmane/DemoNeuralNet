@@ -152,12 +152,12 @@ class TrioBox
 		#document.body.appendChild(parent)
 
 
-		posColors = ["#808080", "#AA5555", "#D52B2B", "#FF0000"]
-		negColors = ["#808080", "#5555AA", "#2B2BD5", "#0000FF"]
-		tieColors = ["#808080", "#DA70D6", "purple"]
-		@posBox = new NeuronBox(@posNeuron, posColors, @me, true)
-		@negBox = new NeuronBox(@negNeuron, negColors, @me, true)
-		@tieBox = new NeuronBox(@tieNeuron, tieColors, @me, true)
+		posColors = ["#808080", "red", "#D52B2B", "#FF0000"]
+		negColors = ["#808080", "blue", "#2B2BD5", "#0000FF"]
+		tieColors = ["#808080", "purple", "purple"]
+		@posBox = new TripleNeuronBox(@posNeuron, posColors, @me, true)
+		@negBox = new TripleNeuronBox(@negNeuron, negColors, @me, true)
+		@tieBox = new DoubleNeuronBox(@tieNeuron, tieColors, @me, true)
 
 	reload: () => 
 		@posBox.reload()
@@ -175,9 +175,9 @@ class OutcomeBox
 		posColors = ["grey", "red"]
 		negColors = ["grey", "blue"]
 		tieColors = ["grey", "purple"]
-		@posBox = new NeuronBox(game.posOutcome, posColors, @me, false)
-		@negBox = new NeuronBox(game.negOutcome, negColors, @me, false)
-		@tieBox = new NeuronBox(game.tieOutcome, tieColors, @me, false)
+		@posBox = new SimpleNeuronBox(game.posOutcome, posColors, @me, "Red Win")
+		@negBox = new SimpleNeuronBox(game.negOutcome, negColors, @me, "Blue Win")
+		@tieBox = new SimpleNeuronBox(game.tieOutcome, tieColors, @me, "Tie Game")
 
 	reload: () ->
 		@posBox.reload()
@@ -185,32 +185,64 @@ class OutcomeBox
 		@tieBox.reload()
 
 
-class NeuronBox
-	constructor: (@neuron, @colors, @container, isSmall) ->
-		if isSmall
-			className = "smallNeuronBox"
-		else
-			className = "neuronBox"
-		@me = document.createElement("div")
-		@me.id = "neuronBox " + @neuron.name 
-		@me.className = className
-		@container.appendChild(@me)
-		@s = @me.style
-		unless isSmall
-			text = document.createTextNode(@neuron.name)
-			@me.appendChild(text)
+
+
+
+class SimpleNeuronBox
+	constructor: (@neuron, @colors, @container, title) ->
+		@me = makeDiv(@neuron.name, "neuronContainer", @container)
+		tbox = makeDiv(@neuron.name, "neuronTitle", @me)
+		@nb = makeDiv(@neuron.name, "neuronBox", @me)
+		t = document.createTextNode(title)
+		tbox.appendChild(t)
+
 
 	reload: () ->
 		energyLevel = @neuron.energyLevel
 		#console.log("reloaded ", @neuron.name, "color to ", @colors[energyLevel], @colors, energyLevel)
-		@me.style.backgroundColor = @colors[energyLevel]
+		@nb.style.backgroundColor = @colors[energyLevel]
+
+class TripleNeuronBox
+	constructor: (@neuron, @colors, @container) ->
+		@me = makeDiv(@neuron.name, "tripleNeuronBox", @container)
+		b1 = makeDiv(@neuron.name + "1", "thirdNeuron", @me)
+		b2 = makeDiv(@neuron.name + "2", "thirdNeuron", @me)
+		b3 = makeDiv(@neuron.name + "3", "thirdNeuron", @me)
+		@bs = [b3, b2, b1]
+
+	reload: () ->
+		energyLevel = @neuron.energyLevel
+		#console.log("reloaded ", @neuron.name, "color to ", @colors[energyLevel], @colors, energyLevel)
+		for i in [0..2]
+			if energyLevel > i
+				@bs[i].style.backgroundColor = @colors[1]
+			else
+				@bs[i].style.backgroundColor = @colors[0]
+
+class DoubleNeuronBox
+	constructor: (@neuron, @colors, @container) ->
+		@me = makeDiv(@neuron.name, "tripleNeuronBox", @container)
+		b1 = makeDiv(@neuron.name + "1", "secondNeuron", @me)
+		b2 = makeDiv(@neuron.name + "2", "secondNeuron", @me)
+		@bs = [b2, b1]
+
+	reload: () ->
+		energyLevel = @neuron.energyLevel
+		#console.log("reloaded ", @neuron.name, "color to ", @colors[energyLevel], @colors, energyLevel)
+		for i in [0..1]
+			if energyLevel > i
+				@bs[i].style.backgroundColor = @colors[1]
+			else
+				@bs[i].style.backgroundColor = @colors[0]
+
+
+
+
+
 
 class GameGrid
 	constructor: (@game, @nb) ->
-		@me = document.createElement("div");
-		@me.id = "grid"
-		@me.className = "gameGrid"
-		document.body.appendChild(@me)
+		@me = makeDiv("","gameGrid",document.body)
 		boxes = []
 		for i in [0..8]
 			boxes.push( new Box(game, @, i) )
@@ -220,14 +252,20 @@ class GameGrid
 
 class Box
 	nextToggle = 1
+	freeMode = 0
+	count = 0
 	constructor: (@game, @grid, @idx) ->
-		@elem = document.createElement("div")
-		@elem.id = "box" + idx
-		@elem.className = "box"
-		@elem.onclick = @toggle #"toggleBox(" + @idx + ")"
-		@grid.me.appendChild(@elem)
+		@me = makeDiv(idx, "box", @grid.me)
+		@me.onclick = @toggle #"toggleBox(" + @idx + ")"
 
 	toggle: () =>
+		if freeMode || count == 9
+			@toggleFree()
+		else
+			count++
+			@toggleGame()
+
+	toggleGame: () =>
 		if @game.boxes[@idx] == 0
 			console.log("toggling box ", @idx, nextToggle)
 			#ns = @game.toggleBox(@idx)
@@ -237,7 +275,18 @@ class Box
 			c = "grey" if ns is 0
 			c = "red"  if ns is 1
 			c = "blue" if ns is -1
-			@elem.style.backgroundColor = c
+			@me.style.backgroundColor = c
+			@grid.reload()
+
+	toggleFree: () =>
+		ns = @game.toggleBox(@idx)
+		#ns = nextToggle
+		@game.changeBox(@idx, ns)
+		#nextToggle *= -1
+		c = "grey" if ns is 0
+		c = "red"  if ns is 1
+		c = "blue" if ns is -1
+		@me.style.backgroundColor = c
 		@grid.reload()
 
 class BoardAndNeurons
@@ -250,6 +299,12 @@ class BoardAndNeurons
 		@tc.reload()
 		@ob.reload()
 
+makeDiv = (id, classs, parent) -> 
+	e = document.createElement("div")
+	e.id = classs + id
+	e.className = classs
+	parent.appendChild(e)
+	return e
 
 
 game = new TicTacToeNN()
